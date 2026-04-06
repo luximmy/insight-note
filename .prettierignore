@@ -1,0 +1,12 @@
+.next
+out
+build
+node_modules
+pnpm-lock.yaml
+*.log
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.ico
