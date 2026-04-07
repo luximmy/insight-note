@@ -1,11 +1,16 @@
 "use client";
 import ChatComposer from "@/components/chat/ChatComposer";
 import MessageList from "@/components/chat/MessageList";
-import { ChatMessage } from "@/components/chat/MessageTypes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useChat } from "@ai-sdk/react";
+import { TextStreamChatTransport } from "ai";
 
 function ChatPanel() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { messages, sendMessage } = useChat({
+    transport: new TextStreamChatTransport({
+      api: "/api/chat",
+    }),
+  });
   const endRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({
@@ -13,32 +18,24 @@ function ChatPanel() {
     });
   }, [messages.length]);
   const handleSend = async (content: string) => {
-    const nextMessages: ChatMessage[] = [
-      ...messages,
-      {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-      },
-    ];
-    setMessages(nextMessages);
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      body: JSON.stringify({ messages: nextMessages }),
+    await sendMessage({
+      text: content,
     });
-    const data = await response.json();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        ...data,
-      },
-    ]);
   };
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <MessageList messages={messages}></MessageList>
+        <MessageList
+          messages={messages
+            .filter((m) => m.role === "user" || m.role === "assistant")
+            .map((message) => ({
+              id: message.id,
+              role: message.role === "assistant" ? "assistant" : "user",
+              content: message.parts
+                .map((part) => (part.type === "text" ? part.text : ""))
+                .join(""),
+            }))}
+        ></MessageList>
         <div ref={endRef} />
       </div>
       <ChatComposer onSend={handleSend}></ChatComposer>
