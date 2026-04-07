@@ -6,40 +6,34 @@ import { useEffect, useRef, useState } from "react";
 
 function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const timeoutRef = useRef<number | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
   useEffect(() => {
     endRef.current?.scrollIntoView({
       block: "end",
     });
   }, [messages.length]);
-  const handleSend = (content: string) => {
-    setMessages((prev) => [
-      ...prev,
+  const handleSend = async (content: string) => {
+    const nextMessages: ChatMessage[] = [
+      ...messages,
       {
         id: crypto.randomUUID(),
         role: "user",
         content,
       },
+    ];
+    setMessages(nextMessages);
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ messages: nextMessages }),
+    });
+    const data = await response.json();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        ...data,
+      },
     ]);
-    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "收到!",
-        },
-      ]);
-    }, 300);
   };
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
